@@ -10,6 +10,7 @@ if ( !globalThis.crypto ) {
 
 import customersRouter from "./routes/customers.js";
 import accountsRouter from "./routes/accounts.js";
+import { ChaosError, logChaosConfig } from "./utils/chaos.js";
 import {
 	sanitizeError,
 	logError,
@@ -138,7 +139,17 @@ app.use( ( req, res ) => {
 } );
 
 // Global error handler
-app.use( ( error: unknown, req: Request, res: Response ) => {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars, no-unused-vars
+app.use( ( error: unknown, req: Request, res: Response, _next: NextFunction ) => {
+	// Handle ChaosError with appropriate status code and retryable info
+	if ( error instanceof ChaosError ) {
+		return res.status( error.statusCode ).json( {
+			error: error.errorType,
+			message: error.message,
+			retryable: error.retryable
+		} );
+	}
+
 	logError( logger, error, { path: req.path, method: req.method } );
 	const sanitized = sanitizeError( error );
 	const statusCode = typeof error === "object" && error !== null && "statusCode" in error
@@ -149,4 +160,5 @@ app.use( ( error: unknown, req: Request, res: Response ) => {
 
 app.listen( PORT, "0.0.0.0", () => {
 	logger.info( `API listening at ${ HOST } (local port: ${ PORT })` );
+	logChaosConfig();
 } );
