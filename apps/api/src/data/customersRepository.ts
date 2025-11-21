@@ -1,24 +1,6 @@
 import { customers } from "./customers.js";
 import { maybeCauseChaosAsync } from "../utils/chaos.js";
-
-// Type definitions
-interface CustomerPreferences {
-	notifications: boolean;
-	twoFactorAuth: boolean;
-}
-
-interface Customer {
-	customerId: string;
-	name: string;
-	email: string;
-	status: string;
-	createdDate: string;
-	preferences: CustomerPreferences;
-}
-
-interface CustomerFilters {
-	status?: string;
-}
+import type { Customer, CustomerFilters } from "../types/fdx.js";
 
 /**
  * Get the current customer (simulating a logged-in user)

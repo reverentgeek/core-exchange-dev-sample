@@ -1,129 +1,17 @@
 import { accounts, accountContacts, accountStatements, accountTransactions, accountPaymentNetworks } from "./accounts.js";
 import { maybeCauseChaosAsync } from "../utils/chaos.js";
-
-// Type definitions
-interface Currency {
-	currencyCode: string;
-}
-
-interface Account {
-	accountCategory: string;
-	accountId: string;
-	accountNumberDisplay: string;
-	productName: string;
-	status: string;
-	currency: Currency;
-	accountType: string;
-	currentBalance: number;
-	availableBalance?: number;  // Optional - not present on all account types
-	// Line of Credit fields
-	availableCredit?: number;
-	creditLine?: number;
-	// Loan fields
-	accountNumber?: string;
-	principalBalance?: number;
-	originalPrincipal?: number;
-	interestRate?: number;
-	interestRateType?: string;
-	loanTerm?: number;
-}
-
-interface Name {
-	first: string;
-	middle?: string;
-	last: string;
-	suffix?: string;
-}
-
-interface Holder {
-	relationship: string;
-	name: Name;
-}
-
-interface Address {
-	line1: string;
-	line2?: string;
-	city: string;
-	region: string;
-	postalCode: string;
-	country: string;
-}
-
-interface Telephone {
-	type: string;
-	country: string;
-	number: string;
-}
-
-interface AccountContact {
-	holders: Holder[];
-	emails: string[];
-	addresses: Address[];
-	telephones: Telephone[];
-}
-
-interface Link {
-	href: string;
-	rel: string;
-	action: string;
-	types: string[];
-}
-
-interface Statement {
-	accountId: string;
-	statementId: string;
-	statementDate: string;
-	description: string;
-	links: Link[];
-	status: string;
-}
-
-interface Transaction {
-	accountCategory: string;
-	transactionType: string;
-	checkNumber?: number;
-	payee?: string;
-	transactionId: string;
-	postedTimestamp: string;
-	transactionTimestamp: string;
-	description: string;
-	debitCreditMemo: string;
-	status: string;
-	amount: number;
-}
-
-interface PaymentNetwork {
-	bankId: string;
-	identifier: string;
-	type: string;
-	transferIn: boolean;
-	transferOut: boolean;
-}
-
-interface PaginatedAccountsResult {
-	accounts: Account[];
-	total: number;
-}
-
-interface PaginatedStatementsResult {
-	statements: Statement[];
-	total: number;
-}
-
-interface PaginatedTransactionsResult {
-	transactions: Transaction[];
-	total: number;
-}
-
-interface PaginatedPaymentNetworksResult {
-	paymentNetworks: PaymentNetwork[];
-	total: number;
-}
-
-interface PaginatedAssetTransferNetworksResult {
-	assetTransferNetworks: PaymentNetwork[];
-	total: number;
-}
+import type {
+	Account,
+	AccountContact,
+	Statement,
+	Transaction,
+	PaymentNetwork,
+	PaginatedAccountsResult,
+	PaginatedStatementsResult,
+	PaginatedTransactionsResult,
+	PaginatedPaymentNetworksResult,
+	PaginatedAssetTransferNetworksResult
+} from "../types/fdx.js";
 
 // Simulating async database operations with promises
 
