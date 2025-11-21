@@ -22,6 +22,12 @@ sudo caddy trust         # Install Caddy's internal CA root to macOS trust store
 sudo caddy run --config ./caddyfile  # Run Caddy in another terminal window
 # OR use the pnpm script:
 pnpm caddy
+
+# Start Temporal server (required for API)
+# Using Temporal CLI (recommended for development):
+temporal server start-dev
+# Or using Docker:
+docker run -d --name temporal -p 7233:7233 temporalio/auto-setup:latest
 ```
 
 ### Development
@@ -34,9 +40,10 @@ pnpm caddy
 pnpm dev
 
 # Run individual services
-pnpm dev:auth  # Authorization Server
-pnpm dev:api   # Resource Server (API)
-pnpm dev:app   # Client App (Relying Party)
+pnpm dev:auth        # Authorization Server
+pnpm dev:api         # Resource Server (API)
+pnpm dev:api:worker  # Temporal Worker (for API)
+pnpm dev:app         # Client App (Relying Party)
 
 # Build all applications
 pnpm build
@@ -115,6 +122,7 @@ Key features:
 - Uses Pino for structured logging
 - Runs on port 3003
 - Implements FDX with Plaid's Core Exchange API specification (v6.3.1)
+- **Uses Temporal for resilient data fetching with automatic retries**
 
 Key components:
 
@@ -124,6 +132,17 @@ Key components:
 - Repository pattern for data access
 - Request validation utilities
 - Public health endpoint
+- Temporal workflows and activities for fault-tolerant operations
+
+Temporal Integration:
+
+- **Activities** (`src/temporal/activities.ts`): Data fetching operations that may fail
+- **Workflows** (`src/temporal/workflows.ts`): Orchestrate activities with retry policies
+- **Worker** (`src/temporal/worker.ts`): Executes workflows and activities
+- **Client** (`src/temporal/client.ts`): API routes invoke workflows via client
+- **Retry policy**: 10 attempts, 500ms initial interval, 5s max interval, exponential backoff
+- **Chaos testing**: Built-in chaos generator simulates database/network failures
+- **Non-retryable errors**: Some error types fail immediately without retrying
 
 Available endpoints (FDX compliant):
 
@@ -218,6 +237,31 @@ Default token lifetimes (configured in `apps/auth/src/index.ts`):
 - Access Token: 1 hour (3600 seconds)
 - ID Token: 1 hour (3600 seconds)
 - Refresh Token: 14 days (1209600 seconds)
+
+### Temporal Configuration
+
+The API uses Temporal for resilient data operations:
+
+**Environment variables:**
+
+- `TEMPORAL_ADDRESS` - Temporal server address (default: `localhost:7233`)
+- `TEMPORAL_NAMESPACE` - Temporal namespace (default: `default`)
+
+**Chaos testing environment variables:**
+
+- `CHAOS_ENABLED` - Enable chaos monkey (default: `false`)
+- `CHAOS_ERROR_RATE` - Probability of error 0-1 (default: `0.1` = 10%)
+- `CHAOS_ERROR_TYPES` - Comma-separated list of enabled error types
+- `CHAOS_ADD_LATENCY` - Add random 0-500ms delays (default: `false`)
+
+**Available chaos error types:**
+
+- `DATABASE_CONNECTION`, `DATABASE_TIMEOUT`, `DATABASE_DEADLOCK`
+- `NETWORK_TIMEOUT`, `NETWORK_CONNECTION_REFUSED`
+- `SERVICE_UNAVAILABLE`, `INTERNAL_SERVER_ERROR`, `RESOURCE_EXHAUSTED`
+- `NON_RETRYABLE_ERROR` (fails immediately without retries)
+
+**Task queue:** `api-tasks`
 
 ### Token Signing Keys (JWKS)
 

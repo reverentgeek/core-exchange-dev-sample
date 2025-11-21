@@ -26,6 +26,7 @@ A working example of [Plaid Core Exchange](https://plaid.com/core-exchange/docs/
 
 - **Express** (v5) - Our HTTP server framework
 - **Caddy** - Reverse proxy that handles HTTPS with zero config
+- **Temporal** - Durable workflow engine for resilient operations
 - **Pino** - Fast, structured JSON logging
 - **Helmet** - Security headers on by default
 
@@ -54,6 +55,8 @@ The OpenID Provider. This is where users log in and grant permissions. We're usi
 
 The protected API implementing FDX v6.3 using Plaid's Core Exchange. Every request gets validated—we check JWT access tokens using `jose` against the Auth server's JWKS endpoint and enforce scope-based authorization. Customer and account data live here, accessed via a repository pattern.
 
+**Built for resilience:** All data operations run through Temporal workflows with automatic retry logic. When transient failures occur (database timeouts, network issues), Temporal transparently retries until success or a configured limit. This means your API stays reliable even when downstream services are flaky.
+
 **Endpoints you get:** Customer info, account details, statements, transactions, contact info, payment and asset transfer network data
 
 ### Client Application (`apps/app`)
@@ -71,7 +74,7 @@ Common utilities and TypeScript configs that all three apps use. Managed with pn
 ### What You Need (macOS)
 
 ```bash
-brew install node pnpm caddy
+brew install node pnpm caddy temporal
 ```
 
 **Version requirements:**
@@ -79,6 +82,7 @@ brew install node pnpm caddy
 - Node.js ≥22.0.0 (we enforce this in `package.json`)
 - pnpm ≥10.15.1
 - Caddy (latest is fine)
+- Temporal CLI (latest is fine)
 
 ### Installation
 
@@ -93,11 +97,14 @@ This installs dependencies for all workspace packages. We're using pnpm workspac
 ### Development Mode
 
 ```bash
-pnpm dev              # Run all three services with hot reload
+pnpm dev              # Run all services with hot reload (auth, api, worker, app)
 pnpm dev:auth         # Just the Authorization Server
 pnpm dev:api          # Just the Resource Server
+pnpm dev:api:worker   # Just the Temporal Worker
 pnpm dev:app          # Just the Client Application
 ```
+
+**Note:** Before running `pnpm dev`, you need to start Temporal and Caddy in separate terminals.
 
 ### Production Mode
 
@@ -114,6 +121,24 @@ pnpm --filter @apps/app start    # Start Client app
 pnpm lint             # Check code style
 pnpm lint:fix         # Fix what can be auto-fixed
 pnpm caddy            # Start the reverse proxy (needs sudo)
+pnpm temporal         # Start Temporal dev server
+```
+
+### Starting Temporal
+
+The API uses Temporal for resilient data operations. Start the dev server before running the apps:
+
+```bash
+# In a dedicated terminal
+pnpm temporal
+```
+
+This starts Temporal on `localhost:7233`. You can access the Temporal Web UI at `http://localhost:8233` to monitor workflows.
+
+**Alternative: Docker**
+
+```bash
+docker run -d --name temporal -p 7233:7233 -p 8233:8233 temporalio/auto-setup:latest
 ```
 
 ### Setting Up HTTPS with Caddy
@@ -218,6 +243,23 @@ All the FDX v6.3 endpoints you need for Plaid Core Exchange:
 
 Every endpoint validates JWT access tokens and enforces the right scopes.
 
+**Temporal Integration:**
+
+- All data operations run as Temporal workflows with automatic retries
+- Retry policy: 10 attempts, exponential backoff (500ms to 5s), 30s timeout
+- Non-retryable errors fail immediately without wasting retry attempts
+- Monitor workflows in the Temporal Web UI at `http://localhost:8233`
+
+**Chaos Testing:**
+
+Enable chaos monkey to simulate failures and test resilience:
+
+```bash
+CHAOS_ENABLED=true CHAOS_ERROR_RATE=0.3 pnpm dev
+```
+
+This randomly injects errors (database timeouts, network failures, etc.) to demonstrate Temporal's retry capabilities. Watch the Temporal UI to see workflows automatically recovering from failures.
+
 ### Client Application (APP)
 
 - **API Explorer** - Interactive UI for testing endpoints with query parameters
@@ -267,6 +309,14 @@ REDIRECT_URI=https://app.localtest.me/callback
 # Use the scripts/secrets.js CLI app to generate new secrets
 COOKIE_SECRET=dev-cookie-secret-CHANGE-FOR-PRODUCTION
 API_AUDIENCE=api://my-api
+
+# Temporal (optional - defaults shown)
+TEMPORAL_ADDRESS=localhost:7233
+TEMPORAL_NAMESPACE=default
+
+# Chaos Testing (for resilience demos)
+CHAOS_ENABLED=false
+CHAOS_ERROR_RATE=0.1
 ```
 
 ### Generating Secure Secrets
