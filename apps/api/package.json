@@ -5,8 +5,10 @@
   "private": true,
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "dev:worker": "tsx watch src/temporal/worker.ts",
     "build": "tsc -b",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "start:worker": "node dist/temporal/worker.js"
   },
   "dependencies": {
     "@apps/shared": "workspace:*",
@@ -18,11 +20,13 @@
     "express": "^5.1.0",
     "jose": "^6.1.0",
     "pino": "^9.14.0",
-    "pino-pretty": "^13.1.2"
+    "pino-pretty": "^13.1.2",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@types/express": "^5.0.3",
     "@types/node": "^24.9.1",
+    "@types/uuid": "^11.0.0",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3"
   }

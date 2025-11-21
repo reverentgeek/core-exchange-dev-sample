@@ -12,8 +12,9 @@
   "scripts": {
     "dev:auth": "pnpm --filter @apps/auth dev",
     "dev:api": "pnpm --filter @apps/api dev",
+    "dev:api:worker": "pnpm --filter @apps/api dev:worker",
     "dev:app": "pnpm --filter @apps/app dev",
-    "dev": "pnpm build && NODE_TLS_REJECT_UNAUTHORIZED=0 concurrently -n auth,api,app -c blue,green,magenta \"pnpm dev:auth\" \"pnpm dev:api\" \"pnpm dev:app\"",
+    "dev": "pnpm build && NODE_TLS_REJECT_UNAUTHORIZED=0 concurrently -n auth,api,worker,app -c blue,green,yellow,magenta \"pnpm dev:auth\" \"pnpm dev:api\" \"pnpm dev:api:worker\" \"pnpm dev:app\"",
     "build": "pnpm -r --filter \"@apps/*\" run build",
     "caddy": "sudo caddy run --config ./caddyfile",
     "lint": "eslint .",

@@ -10,7 +10,8 @@ export enum ChaosErrorType {
 	NETWORK_CONNECTION_REFUSED = "NETWORK_CONNECTION_REFUSED",
 	SERVICE_UNAVAILABLE = "SERVICE_UNAVAILABLE",
 	INTERNAL_SERVER_ERROR = "INTERNAL_SERVER_ERROR",
-	RESOURCE_EXHAUSTED = "RESOURCE_EXHAUSTED"
+	RESOURCE_EXHAUSTED = "RESOURCE_EXHAUSTED",
+	NON_RETRYABLE_ERROR = "NON_RETRYABLE_ERROR"
 	/* eslint-enable no-unused-vars */
 }
 
@@ -22,7 +23,8 @@ export class ChaosError extends Error {
 
 	constructor( errorType: ChaosErrorType, message: string, statusCode: number, retryable: boolean ) {
 		super( message );
-		this.name = "ChaosError";
+		// Use "NonRetryableError" name for Temporal to skip retries
+		this.name = errorType === ChaosErrorType.NON_RETRYABLE_ERROR ? "NonRetryableError" : "ChaosError";
 		this.errorType = errorType;
 		this.statusCode = statusCode;
 		this.retryable = retryable;
@@ -70,6 +72,11 @@ const errorConfigs: Record<ChaosErrorType, { message: string; statusCode: number
 		message: "Resource exhausted: too many open connections",
 		statusCode: 503,
 		retryable: true
+	},
+	[ChaosErrorType.NON_RETRYABLE_ERROR]: {
+		message: "A non-retryable error occurred",
+		statusCode: 500,
+		retryable: false
 	}
 };
 
@@ -101,7 +108,7 @@ function getConfig(): ChaosConfig {
 }
 
 // Main chaos function - call this before/during operations
-export function maybeCauseChoas( operationName: string ): void {
+export function maybeCauseChaos( operationName: string ): void {
 	const config = getConfig();
 
 	if ( !config.enabled ) {
@@ -147,7 +154,7 @@ export async function maybeCauseChaosAsync( operationName: string ): Promise<voi
 		await new Promise( resolve => setTimeout( resolve, extraLatency ) );
 	}
 
-	maybeCauseChoas( operationName );
+	maybeCauseChaos( operationName );
 }
 
 // Log chaos configuration on startup

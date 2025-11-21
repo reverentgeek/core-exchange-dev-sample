@@ -1,5 +1,14 @@
 import express, { Request, Response } from "express";
-import { getAccounts, getAccountById, getAccountContactById, getAccountStatements, getAccountStatementById, getAccountTransactions, getPaymentNetworks, getAssetTransferNetworks } from "../data/accountsRepository.js";
+import {
+	fetchAccounts,
+	fetchAccountById,
+	fetchAccountContactById,
+	fetchAccountStatements,
+	fetchAccountStatementById,
+	fetchAccountTransactions,
+	fetchPaymentNetworks,
+	fetchAssetTransferNetworks
+} from "../temporal/client.js";
 import { isValidDate } from "../utils/validation.js";
 import pino from "pino";
 
@@ -42,7 +51,7 @@ interface PaymentNetworksQueryParams {
 // Returns the account object if found; otherwise handles the response and returns null
 async function verifyAccount( accountId: string, res: Response, notFoundCode = 701 ) {
 	try {
-		const account = await getAccountById( accountId );
+		const account = await fetchAccountById( accountId );
 		if ( !account ) {
 			res.status( 404 ).json( { code: notFoundCode, error: "An account with the provided account ID could not be found" } );
 			return null;
@@ -62,8 +71,8 @@ router.get( "/accounts", async ( req: Request<{}, {}, {}, AccountsQueryParams>, 
 	const limit = parseInt( req.query.limit as string ) || 100;
 
 	try {
-		// Get accounts using the repository
-		const result = await getAccounts( offset, limit );
+		// Get accounts using Temporal workflow
+		const result = await fetchAccounts( offset, limit ) as { accounts: unknown[]; total: number };
 
 		// Calculate pagination metadata
 		const hasMore = offset + limit < result.total;
@@ -86,7 +95,7 @@ router.get( "/accounts/:accountId", async ( req: Request<{ accountId: string }>,
 	const { accountId } = req.params;
 
 	try {
-		const account = await getAccountById( accountId );
+		const account = await fetchAccountById( accountId );
 
 		if ( !account ) {
 			return res.status( 404 ).json( { code: 701, error: "An account with the provided account ID could not be found" } );
@@ -106,7 +115,7 @@ router.get( "/accounts/:accountId/contact", async ( req: Request<{ accountId: st
 	if ( !account ) return;
 
 	try {
-		const contact = await getAccountContactById( accountId );
+		const contact = await fetchAccountContactById( accountId );
 
 		if ( !contact ) {
 			return res.status( 404 ).json( { code: 601, error: "An account with the provided account ID could not be found" } );
@@ -140,7 +149,7 @@ router.get( "/accounts/:accountId/statements", async ( req: Request<{ accountId:
 	}
 
 	try {
-		const result = await getAccountStatements( accountId, offset, limit, startTime, endTime );
+		const result = await fetchAccountStatements( accountId, offset, limit, startTime, endTime ) as { statements: unknown[]; total: number };
 
 		// Calculate pagination metadata
 		const hasMore = offset + limit < result.total;
@@ -167,7 +176,7 @@ router.get( "/accounts/:accountId/statements/:statementId", async ( req: Request
 		const account = await verifyAccount( accountId, res, 701 );
 		if ( !account ) return;
 
-		const statement = await getAccountStatementById( accountId, statementId );
+		const statement = await fetchAccountStatementById( accountId, statementId );
 		if ( !statement ) {
 			return res.status( 404 ).json( { code: 601, error: "Statement not found for the provided accountId/statementId" } );
 		}
@@ -206,7 +215,7 @@ router.get( "/accounts/:accountId/transactions", async ( req: Request<{ accountI
 	}
 
 	try {
-		const result = await getAccountTransactions( accountId, offset, limit, startTime, endTime );
+		const result = await fetchAccountTransactions( accountId, offset, limit, startTime, endTime ) as { transactions: unknown[]; total: number };
 		const hasMore = offset + limit < result.total;
 		const page = hasMore ? { nextOffset: String( offset + limit ) } : {};
 		return res.json( {
@@ -229,8 +238,8 @@ router.get( "/accounts/:accountId/payment-networks", async ( req: Request<{ acco
 	if ( !account ) return;
 
 	try {
-		// Get accounts using the repository
-		const result = await getPaymentNetworks( accountId, offset, limit );
+		// Get payment networks using Temporal workflow
+		const result = await fetchPaymentNetworks( accountId, offset, limit ) as { paymentNetworks: unknown[]; total: number };
 
 		// Calculate pagination metadata
 		const hasMore = offset + limit < result.total;
@@ -259,7 +268,7 @@ router.get( "/accounts/:accountId/asset-transfer-networks", async ( req: Request
 	if ( !account ) return;
 
 	try {
-		const result = await getAssetTransferNetworks( accountId, offset, limit );
+		const result = await fetchAssetTransferNetworks( accountId, offset, limit ) as { assetTransferNetworks: unknown[]; total: number };
 		const hasMore = offset + limit < result.total;
 		const page = hasMore ? { nextOffset: String( offset + limit ) } : {};
 		return res.json( {

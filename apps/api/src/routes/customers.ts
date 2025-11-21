@@ -1,5 +1,5 @@
 import express, { Request, Response } from "express";
-import { getCurrentCustomer } from "../data/customersRepository.js";
+import { fetchCurrentCustomer } from "../temporal/client.js";
 import pino from "pino";
 
 const logger = pino( {
@@ -16,8 +16,8 @@ const router = express.Router();
 // Get current customer
 router.get( "/customers/current", async ( req: Request, res: Response ) => {
 	try {
-		// Get current customer using the repository
-		const customer = await getCurrentCustomer();
+		// Get current customer using Temporal workflow
+		const customer = await fetchCurrentCustomer();
 
 		//HTTP status and error code are not always the same, check the API documentation for specifics
 		if ( !customer ) {
