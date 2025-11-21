@@ -1,4 +1,5 @@
 import { logger } from "@apps/shared";
+import { ApplicationFailure } from "@temporalio/activity";
 
 // Error types that can be randomly generated
 export enum ChaosErrorType {
@@ -23,8 +24,8 @@ export class ChaosError extends Error {
 
 	constructor( errorType: ChaosErrorType, message: string, statusCode: number, retryable: boolean ) {
 		super( message );
-		// Use "NonRetryableError" name for Temporal to skip retries
-		this.name = errorType === ChaosErrorType.NON_RETRYABLE_ERROR ? "NonRetryableError" : "ChaosError";
+		// Use errorType as name so Temporal can match nonRetryableErrorTypes
+		this.name = errorType;
 		this.errorType = errorType;
 		this.statusCode = statusCode;
 		this.retryable = retryable;
@@ -131,12 +132,12 @@ export function maybeCauseChaos( operationName: string ): void {
 		message: errorConfig.message
 	}, `Chaos monkey triggered: ${ errorType }` );
 
-	throw new ChaosError(
-		errorType,
-		errorConfig.message,
-		errorConfig.statusCode,
-		errorConfig.retryable
-	);
+	// Use Temporal's ApplicationFailure for proper retry handling
+	if ( !errorConfig.retryable ) {
+		throw ApplicationFailure.nonRetryable( errorConfig.message, errorType );
+	}
+
+	throw ApplicationFailure.retryable( errorConfig.message, errorType );
 }
 
 // Async version that can also add random delays

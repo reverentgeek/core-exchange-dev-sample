@@ -20,8 +20,7 @@ const {
 		initialInterval: "500ms",
 		backoffCoefficient: 2,
 		maximumInterval: "5s",
-		maximumAttempts: 10,
-		nonRetryableErrorTypes: [ "NonRetryableError" ]
+		maximumAttempts: 10
 	}
 } );
 
